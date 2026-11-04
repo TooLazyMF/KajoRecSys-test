@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AccountActivityController;
 use App\Http\Controllers\AppointmentController;
 use App\Http\Controllers\CnsController;
 use App\Http\Controllers\EmailVerificationOtpController;
@@ -38,7 +39,14 @@ Route::middleware(['guest', 'throttle:two-factor'])->group(function () {
         ->name('two-factor.email.verify');
 });
 
+Route::post('logout', [AccountActivityController::class, 'logout'])
+    ->middleware('auth')
+    ->name('logout');
+
 Route::middleware(['auth', 'verified'])->group(function () {
+    Route::post('account-activity', [AccountActivityController::class, 'touch'])
+        ->name('account-activity.touch');
+
     Route::get('dashboard', function () {
         if (auth()->user()->role === 'student') {
             return redirect()->route('student.dashboard');
@@ -104,24 +112,24 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('appointments', [AppointmentController::class, 'index'])->name('appointments.index');
         Route::post('appointments', [AppointmentController::class, 'store'])->name('appointments.store');
         Route::post('appointments/{appointment}/accept', [AppointmentController::class, 'accept'])->name('appointments.accept');
-    Route::post('guidance/referrals/{referral}/appoint', [AppointmentController::class, 'appointFromReferral'])
-        ->middleware('role:guidance_counselor')
-        ->name('guidance.referrals.appoint');
-    Route::patch('guidance/referrals/{referral}/appointments/{appointment}', [AppointmentController::class, 'updateFromReferral'])
-        ->middleware('role:guidance_counselor')
-        ->name('guidance.referrals.appointments.update');
-    Route::post('appointments/{appointment}/complete', [AppointmentController::class, 'complete'])
-        ->middleware('role:guidance_counselor')
-        ->name('appointments.complete');
-    Route::post('appointments/{appointment}/missed', [AppointmentController::class, 'markMissed'])
-        ->middleware('role:guidance_counselor')
-        ->name('appointments.missed');
-    Route::patch('appointments/{appointment}/action-taken', [AppointmentController::class, 'updateActionTaken'])
-        ->middleware('role:guidance_counselor')
-        ->name('appointments.action-taken.update');
-    Route::get('appointments/{appointment}/attachments/{attachment}', [AppointmentController::class, 'downloadAttachment'])
-        ->whereNumber('attachment')
-        ->name('appointments.attachments.download');
+        Route::post('guidance/referrals/{referral}/appoint', [AppointmentController::class, 'appointFromReferral'])
+            ->middleware('role:guidance_counselor')
+            ->name('guidance.referrals.appoint');
+        Route::patch('guidance/referrals/{referral}/appointments/{appointment}', [AppointmentController::class, 'updateFromReferral'])
+            ->middleware('role:guidance_counselor')
+            ->name('guidance.referrals.appointments.update');
+        Route::post('appointments/{appointment}/complete', [AppointmentController::class, 'complete'])
+            ->middleware('role:guidance_counselor')
+            ->name('appointments.complete');
+        Route::post('appointments/{appointment}/missed', [AppointmentController::class, 'markMissed'])
+            ->middleware('role:guidance_counselor')
+            ->name('appointments.missed');
+        Route::patch('appointments/{appointment}/action-taken', [AppointmentController::class, 'updateActionTaken'])
+            ->middleware('role:guidance_counselor')
+            ->name('appointments.action-taken.update');
+        Route::get('appointments/{appointment}/attachments/{attachment}', [AppointmentController::class, 'downloadAttachment'])
+            ->whereNumber('attachment')
+            ->name('appointments.attachments.download');
         Route::post('appointments/{appointment}/decline', [AppointmentController::class, 'decline'])->name('appointments.decline');
         Route::post('appointments/{appointment}/reappoint', [AppointmentController::class, 'reappoint'])->name('appointments.reappoint');
     });

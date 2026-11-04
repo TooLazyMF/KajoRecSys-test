@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Services\AccountSessionLogger;
 use App\Services\EmailOtpService;
 use Illuminate\Auth\Events\Verified;
 use Illuminate\Contracts\View\View;
@@ -40,8 +41,11 @@ class EmailVerificationOtpController extends Controller
         return back()->with('status', 'A verification code has been sent to your registered email address.');
     }
 
-    public function verify(Request $request, EmailOtpService $otp): RedirectResponse
-    {
+    public function verify(
+        Request $request,
+        EmailOtpService $otp,
+        AccountSessionLogger $sessionLogger,
+    ): RedirectResponse {
         $request->validate([
             'otp' => ['required', 'digits:6'],
         ]);
@@ -66,13 +70,18 @@ class EmailVerificationOtpController extends Controller
             event(new Verified($user));
         }
 
-        if ($this->isPendingRegistration($request, $user)) {
+        $isPendingRegistration = $this->isPendingRegistration($request, $user);
+
+        if ($isPendingRegistration) {
             $request->session()->forget(self::PENDING_USER_SESSION_KEY);
             Auth::guard('web')->login($user);
             $request->session()->regenerate();
+            $sessionLogger->start($request, $user);
         }
 
-        return redirect()->to(route('dashboard', absolute: false).'?verified=1');
+        $dashboard = $isPendingRegistration ? $this->dashboardRouteFor($user) : 'dashboard';
+
+        return redirect()->to(route($dashboard, absolute: false).'?verified=1');
     }
 
     private function verificationUser(Request $request): ?User
@@ -98,5 +107,15 @@ class EmailVerificationOtpController extends Controller
     {
         return ! $request->user()
             && (int) $request->session()->get(self::PENDING_USER_SESSION_KEY) === (int) $user->getKey();
+    }
+
+    private function dashboardRouteFor(User $user): string
+    {
+        return match ($user->role) {
+            'guidance_counselor' => 'guidance.dashboard',
+            'student' => 'student.dashboard',
+            'teacher' => 'teacher.dashboard',
+            default => 'dashboard',
+        };
     }
 }

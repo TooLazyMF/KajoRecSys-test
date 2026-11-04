@@ -8,9 +8,9 @@ use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 use Laravel\Fortify\Contracts\PasskeyUser;
@@ -94,5 +94,10 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
     public function cnsRequests(): HasMany
     {
         return $this->hasMany(CnsRequest::class);
+    }
+
+    public function accountSessionLogs(): HasMany
+    {
+        return $this->hasMany(AccountSessionLog::class);
     }
 }

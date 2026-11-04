@@ -49,107 +49,10 @@
                 </div>
             </section>
 
-            <div class="grid gap-6 lg:grid-cols-2">
-                <section class="rounded-2xl border border-emerald-100 bg-white p-6 shadow-[0_8px_24px_rgba(15,163,68,0.07)] dark:border-zinc-800 dark:bg-zinc-900">
-                    <h2 class="text-lg font-bold">Assigned Slips</h2>
-                    <p class="mt-1 text-sm text-slate-500 dark:text-zinc-400">
-                        Forms assigned to you by a teacher.
-                    </p>
 
-                    @if ($assignments->isEmpty())
-                        <p class="mt-5 rounded-lg bg-gray-50 p-4 text-sm text-gray-600 dark:bg-zinc-800 dark:text-zinc-300">
-                            You do not have any assigned slips yet.
-                        </p>
-                    @else
-                        <ul class="mt-4 divide-y divide-emerald-100 dark:divide-zinc-800">
-                            @foreach ($assignments as $assignment)
-                                @php
-                                    $title = $slips[$assignment->slip]['title'] ?? 'Assigned Slip';
-                                @endphp
-                                <li class="flex flex-wrap items-center justify-between gap-3 py-4">
-                                    <div>
-                                        <p class="font-medium">{{ $title }}</p>
-                                        <p class="mt-1 text-xs text-slate-500 dark:text-zinc-400">
-                                            @if ($assignment->assigned_by === auth()->id())
-                                                Requested by you from Guidance
-                                            @else
-                                                Sent by {{ $assignment->assignedBy->name }}
-                                            @endif
-                                            · {{ $assignment->created_at->format('M j, Y') }}
-                                        </p>
-                                    </div>
-
-                                    @if ($assignment->slip === 'student-referral-slip' && ($assignment->slipSubmission?->data['submitted_by_teacher'] ?? false))
-                                        @if ($assignment->status === 'pending')
-                                            <a href="{{ route('assigned-slips.fillup', $assignment) }}" class="rounded-lg bg-[#09ba44] px-4 py-2 text-xs font-semibold text-[#092010] hover:bg-[#079b38] dark:bg-[#20783e] dark:text-white dark:hover:bg-[#28894a]">
-                                                Review and submit referral
-                                            </a>
-                                        @else
-                                            <a href="{{ route('slips.submissions.show', $assignment->slipSubmission) }}" class="text-xs font-semibold text-[#28643a] hover:underline dark:text-[#91dfa6]">
-                                                View submitted referral
-                                            </a>
-                                        @endif
-                                    @elseif (in_array($assignment->status, ['pending', 'submitted'], true))
-                                        <a href="{{ route('assigned-slips.fillup', $assignment) }}" class="rounded-lg bg-[#09ba44] px-4 py-2 text-xs font-semibold text-[#092010] hover:bg-[#079b38] dark:bg-[#20783e] dark:text-white dark:hover:bg-[#28894a]">
-                                            {{ $assignment->status === 'submitted' ? 'Edit submission' : 'Fill up' }}
-                                        </a>
-                                    @elseif ($assignment->slipSubmission)
-                                        <a href="{{ route('slips.submissions.show', $assignment->slipSubmission) }}" class="text-xs font-semibold text-[#28643a] hover:underline dark:text-[#91dfa6]">
-                                            View completed
-                                        </a>
-                                    @else
-                                        <span class="text-xs font-medium text-gray-500">{{ $assignment->status === 'approved' ? 'Approved' : ucfirst($assignment->status) }}</span>
-                                    @endif
-                                </li>
-                            @endforeach
-                        </ul>
-                    @endif
-
-                    <a href="{{ route('assigned-slips.index') }}" class="mt-3 inline-block text-sm font-semibold text-[#28643a] hover:underline dark:text-[#91dfa6]">
-                        View all assigned slips →
-                    </a>
-                </section>
-
-                <section id="request-forms" class="scroll-mt-6 rounded-2xl border border-emerald-100 bg-white p-6 shadow-[0_8px_24px_rgba(15,163,68,0.07)] dark:border-zinc-800 dark:bg-zinc-900">
-                    <div class="flex flex-wrap items-start justify-between gap-3">
-                        <div>
-                            <h2 class="text-lg font-bold">Slip History</h2>
-                            <p class="mt-1 text-sm text-slate-500 dark:text-zinc-400">
-                                Your recently completed and submitted forms.
-                            </p>
-                        </div>
-                        <a href="{{ route('slip-history.index') }}" class="text-sm font-semibold text-[#28643a] hover:underline dark:text-[#91dfa6]">
-                            View all
-                        </a>
-                    </div>
-
-                    @if ($history->isEmpty())
-                        <p class="mt-5 rounded-lg bg-gray-50 p-4 text-sm text-gray-600 dark:bg-zinc-800 dark:text-zinc-300">
-                            You have not submitted any slips yet.
-                        </p>
-                    @else
-                        <ul class="mt-4 divide-y divide-emerald-100 dark:divide-zinc-800">
-                            @foreach ($history as $entry)
-                                <li class="flex flex-wrap items-center justify-between gap-3 py-4">
-                                    <div>
-                                        <p class="font-medium">{{ $entry['title'] }}</p>
-                                        <p class="mt-1 text-xs text-slate-500 dark:text-zinc-400">
-                                            {{ $entry['date']->format('M j, Y g:i A') }}
-                                            · {{ ucfirst($entry['status']) }}
-                                        </p>
-                                    </div>
-                                    <a href="{{ $entry['url'] }}" class="text-xs font-semibold text-[#28643a] hover:underline dark:text-[#91dfa6]">
-                                        View
-                                    </a>
-                                </li>
-                            @endforeach
-                        </ul>
-                    @endif
-                </section>
-            </div>
 
            
-            <section class="rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-white p-6 shadow-[0_8px_24px_rgba(15,163,68,0.07)] dark:border-zinc-700 dark:from-zinc-900 dark:to-zinc-900">
+            <section id="request-forms" class="rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-white p-6 shadow-[0_8px_24px_rgba(15,163,68,0.07)] dark:border-zinc-700 dark:from-zinc-900 dark:to-zinc-900">
 
                 <h2 class="text-lg font-bold text-emerald-800 dark:text-emerald-300">
                     Request a Form from Guidance

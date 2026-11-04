@@ -14,6 +14,7 @@
             </script>
         @endif
         @include('partials.head')
+        <meta name="csrf-token" content="{{ csrf_token() }}">
     </head>
     <body class="min-h-screen {{ $systemTheme ? 'bg-[#f6f5f1] dark:bg-[#111712]' : 'bg-white dark:bg-zinc-800' }}">
         @php
@@ -222,6 +223,80 @@
         </flux:header>
 
         {{ $slot }}
+
+        <script>
+            (() => {
+                const idleTimeout = 10 * 60 * 1000;
+                const activityUrl = @json(route('account-activity.touch'));
+                const logoutUrl = @json(route('logout'));
+                const loginUrl = @json(route('login'));
+                const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+                let lastActivity = Date.now();
+                let lastSync = 0;
+                let logoutTimer;
+
+                const syncActivity = () => {
+                    if (!csrfToken || Date.now() - lastSync < 60000) {
+                        return;
+                    }
+
+                    lastSync = Date.now();
+                    fetch(activityUrl, {
+                        method: 'POST',
+                        credentials: 'same-origin',
+                        headers: { 'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json' },
+                        keepalive: true,
+                    }).then((response) => {
+                        if (!response.ok) {
+                            throw new Error(`Account activity update failed (${response.status}).`);
+                        }
+                    }).catch((error) => {
+                        console.error('Unable to update account activity.', error);
+                        lastSync = Date.now() - 60000;
+                    });
+                };
+
+                const logOutWhenIdle = () => {
+                    const remaining = idleTimeout - (Date.now() - lastActivity);
+                    if (remaining > 0) {
+                        logoutTimer = window.setTimeout(logOutWhenIdle, remaining);
+                        return;
+                    }
+
+                    const formData = new FormData();
+                    if (csrfToken) {
+                        formData.append('_token', csrfToken);
+                    }
+
+                    fetch(logoutUrl, {
+                        method: 'POST',
+                        credentials: 'same-origin',
+                        headers: { 'Accept': 'application/json' },
+                        body: formData,
+                        keepalive: true,
+                    }).then((response) => {
+                        if (!response.ok) {
+                            throw new Error(`Automatic logout failed (${response.status}).`);
+                        }
+                    }).catch((error) => {
+                        console.error('Unable to complete automatic logout.', error);
+                    }).finally(() => window.location.assign(loginUrl));
+                };
+
+                const registerActivity = () => {
+                    lastActivity = Date.now();
+                    window.clearTimeout(logoutTimer);
+                    logoutTimer = window.setTimeout(logOutWhenIdle, idleTimeout);
+                    syncActivity();
+                };
+
+                ['pointerdown', 'pointermove', 'keydown', 'touchstart', 'wheel', 'click'].forEach((eventName) => {
+                    window.addEventListener(eventName, registerActivity, { passive: true });
+                });
+
+                logoutTimer = window.setTimeout(logOutWhenIdle, idleTimeout);
+            })();
+        </script>
 
         @persist('toast')
             <flux:toast.group>

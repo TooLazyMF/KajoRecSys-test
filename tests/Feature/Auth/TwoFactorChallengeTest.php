@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Auth;
 
+use App\Models\AccountSessionLog;
 use App\Models\User;
 use App\Notifications\EmailOtp;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -70,5 +71,12 @@ class TwoFactorChallengeTest extends TestCase
             ->assertSessionHasNoErrors();
 
         $this->assertAuthenticatedAs($user);
+        $this->assertDatabaseHas('account_session_logs', [
+            'user_id' => $user->id,
+            'latitude' => null,
+            'longitude' => null,
+            'logged_out_at' => null,
+        ]);
+        $this->assertSame(1, AccountSessionLog::query()->where('user_id', $user->id)->count());
     }
 }

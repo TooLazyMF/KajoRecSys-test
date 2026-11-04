@@ -545,6 +545,14 @@
                 transition: none;
             }
 
+            .page[data-mode="login"] .welcome-panel {
+                grid-row: 1;
+            }
+
+            .page[data-mode="login"] .form-panel {
+                grid-row: 2;
+            }
+
             .welcome-copy {
                 padding: 24px 0;
             }
@@ -655,7 +663,7 @@
             </div>
 
             <div data-auth-view="login" @if (old('_welcome_panel') === 'register') hidden inert @endif>
-                <h1 class="form-heading" id="form-heading" tabindex="-1">Welcome back</h1>
+                <h1 class="form-heading" id="form-heading" tabindex="-1">Welcome to KAJOREC</h1>
                 <p class="form-intro">Enter your details to sign in to your KAJOREC account.</p>
 
                 @if (session('status'))

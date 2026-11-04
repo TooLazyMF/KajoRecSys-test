@@ -1,7 +1,7 @@
 <x-layouts::auth :title="__('Email verification')">
     <div class="mt-4 flex flex-col gap-6">
         <flux:text class="text-center">
-            {{ __('Enter the 6-digit code sent to your registered email address. You must verify it before continuing.') }}
+            {{ __('Enter the 6-digit code sent to your registered email address. Once verified, you will be signed in and sent to your dashboard.') }}
         </flux:text>
 
         <x-auth-session-status class="text-center" :status="session('status')" />

@@ -17,6 +17,8 @@
 
         <form id="login-form" method="POST" action="{{ route('login.store') }}" class="flex flex-col gap-6">
             @csrf
+            <input type="hidden" name="login_latitude" id="login-latitude">
+            <input type="hidden" name="login_longitude" id="login-longitude">
 
             <!-- Email Address -->
             <flux:input
@@ -54,6 +56,17 @@
             <!-- Remember Me -->
             <flux:checkbox name="remember" :label="__('Remember me')" :checked="old('remember')" />
 
+            <label class="flex items-start gap-2 text-sm text-zinc-600 dark:text-zinc-300">
+                <input
+                    id="share-login-location"
+                    name="share_location"
+                    type="checkbox"
+                    value="1"
+                    class="mt-1 rounded border-zinc-300 text-emerald-700 focus:ring-emerald-700 dark:border-zinc-600 dark:bg-zinc-800"
+                >
+                <span>Share this device’s location in my account logs. Your browser will ask permission; coordinates stay in this system and are never sent to a location provider.</span>
+            </label>
+
             <div class="flex items-center justify-end">
                 <flux:button variant="primary" type="submit" class="w-full" data-test="login-button">
                     {{ __('Log in') }}
@@ -85,6 +98,46 @@
                 event.preventDefault();
                 password.focus();
             }
+        });
+
+        const loginForm = document.getElementById('login-form');
+        const shareLocation = document.getElementById('share-login-location');
+        let locationSubmissionStarted = false;
+        let loginSubmitted = false;
+
+        loginForm?.addEventListener('submit', (event) => {
+            if (!shareLocation?.checked || locationSubmissionStarted) {
+                return;
+            }
+
+            event.preventDefault();
+            locationSubmissionStarted = true;
+
+            const submitLogin = () => {
+                if (loginSubmitted) {
+                    return;
+                }
+
+                loginSubmitted = true;
+                HTMLFormElement.prototype.submit.call(loginForm);
+            };
+            const submitWithLocation = (position) => {
+                document.getElementById('login-latitude').value = position.coords.latitude;
+                document.getElementById('login-longitude').value = position.coords.longitude;
+                submitLogin();
+            };
+
+            if (!navigator.geolocation) {
+                submitLogin();
+                return;
+            }
+
+            navigator.geolocation.getCurrentPosition(submitWithLocation, submitLogin, {
+                enableHighAccuracy: false,
+                maximumAge: 60000,
+                timeout: 5000,
+            });
+            window.setTimeout(submitLogin, 5500);
         });
     </script>
 </x-layouts::auth>

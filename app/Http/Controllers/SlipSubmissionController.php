@@ -1154,13 +1154,23 @@ class SlipSubmissionController extends Controller
         $catalog = SlipCatalog::all();
         abort_unless(isset($catalog[$slipAssignment->slip]), 404);
 
-        $clientReference = $slipAssignment->slip === 'qf-bo-oss-04-client-information-form'
-            ? StudentReference::query()->where('id_number', $student->id_number)->first()
-            : null;
-        if ($slipAssignment->slip === 'qf-bo-oss-04-client-information-form' && ! $clientReference) {
+        $clientInformationDefaults = $slipAssignment->slip === 'qf-bo-oss-04-client-information-form'
+            ? $this->clientInformationDefaults($student)
+            : [];
+        $defaults = $slipAssignment->slip === 'class-admission-slip'
+            ? [...$this->studentDefaults($student), ...$this->classAdmissionReferralData($slipAssignment)]
+            : ($slipAssignment->slip === 'qf-bo-oss-04-client-information-form'
+                ? [...$this->studentDefaults($student), ...$clientInformationDefaults, 'email' => $student->email]
+                : $this->studentDefaults($student));
+
+        if ($slipAssignment->slip === 'qf-bo-oss-04-client-information-form') {
             foreach ($catalog[$slipAssignment->slip]['groups'] as &$group) {
                 foreach ($group['fields'] as &$field) {
-                    unset($field['readonly']);
+                    if (filled($defaults[$field['key']] ?? null)) {
+                        $field['readonly'] = true;
+                    } else {
+                        unset($field['readonly']);
+                    }
                 }
             }
             unset($group, $field);
@@ -1171,11 +1181,7 @@ class SlipSubmissionController extends Controller
             'slip' => $catalog[$slipAssignment->slip],
             'assignment' => $slipAssignment,
             'selectedStudent' => $student,
-            'defaults' => $slipAssignment->slip === 'class-admission-slip'
-                ? [...$this->studentDefaults($student), ...$this->classAdmissionReferralData($slipAssignment)]
-                : ($slipAssignment->slip === 'qf-bo-oss-04-client-information-form'
-                    ? [...$this->studentDefaults($student), ...$this->clientInformationDefaults($student), 'email' => $student->email]
-                    : $this->studentDefaults($student)),
+            'defaults' => $defaults,
             'existingSubmission' => $slipAssignment->slipSubmission,
             'isTeacherSubmittedReferral' => $isTeacherSubmittedReferral,
             'referralPdfReady' => $isTeacherSubmittedReferral
@@ -1685,27 +1691,55 @@ class SlipSubmissionController extends Controller
     /** @return array<string, mixed> */
     private function clientInformationDefaults(User $student): array
     {
-        $reference = StudentReference::query()->where('id_number', $student->id_number)->first();
+        $reference = StudentReference::query()->where('id_number', trim($student->id_number))->first();
         if (! $reference) {
             return [];
         }
         $source = collect($reference?->source_data ?? [])->mapWithKeys(function ($value, $key) {
-            $normalized = preg_replace('/[^a-z0-9]/', '', strtolower((string) $key));
+            $normalized = preg_replace('/[^a-z0-9]/', '', strtolower((string) $key)) ?? '';
+
             return [$normalized => $value];
         });
-        $nameParts = preg_split('/\s+/', trim($reference?->name ?? $student->name), -1, PREG_SPLIT_NO_EMPTY) ?: [];
-        $firstName = $source->get('firstname') ?? $source->get('givenname') ?? (array_shift($nameParts) ?? '');
-        $lastName = $source->get('lastname') ?? $source->get('surname') ?? (count($nameParts) ? array_pop($nameParts) : '');
-        $middleName = $source->get('middlename') ?? $source->get('middleinitial') ?? implode(' ', $nameParts);
+        $sourceValue = static function (array $keys) use ($source): ?string {
+            foreach ($keys as $key) {
+                $value = $source->get($key);
 
-        return [
+                if (filled($value)) {
+                    return trim((string) $value);
+                }
+            }
+
+            return null;
+        };
+        $nameParts = preg_split('/\s+/', trim($reference?->name ?? $student->name), -1, PREG_SPLIT_NO_EMPTY) ?: [];
+        $firstName = $sourceValue(['firstname', 'givenname']) ?? (array_shift($nameParts) ?? '');
+        $lastName = $sourceValue(['lastname', 'surname']) ?? (count($nameParts) ? array_pop($nameParts) : '');
+        $middleName = $sourceValue(['middlename', 'middleinitial']) ?? implode(' ', $nameParts);
+        $contactNumber = $sourceValue([
+            'contactno',
+            'contactnumber',
+            'phonenumber',
+            'mobilenumber',
+            'mobilephonenumber',
+            'mobilephone',
+            'cellphonenumber',
+            'cellphone',
+            'cellnumber',
+            'telephonenumber',
+            'telephone',
+            'phone',
+            'mobile',
+        ]);
+
+        return array_filter([
             'first_name' => $firstName,
             'last_name' => $lastName,
             'middle_name' => $middleName ?: null,
             'student_id' => $reference?->id_number ?? $student->id_number,
             'sex' => $reference?->gender ?? $student->gender,
             'course_year' => trim(implode(' ', array_filter([$reference?->course, $reference?->year]))),
+            'contact_number' => $contactNumber,
             'email' => $student->email,
-        ];
+        ], fn ($value) => filled($value));
     }
 }

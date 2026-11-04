@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Auth;
 
+use App\Models\AccountSessionLog;
 use App\Models\User;
 use App\Notifications\EmailOtp;
 use Illuminate\Auth\Events\Verified;
@@ -104,7 +105,7 @@ class EmailVerificationTest extends TestCase
         $this->assertFalse($user->fresh()->hasVerifiedEmail());
     }
 
-    public function test_email_verification_code_remains_valid_after_ten_minutes(): void
+    public function test_idle_unverified_user_is_logged_out_after_ten_minutes(): void
     {
         Notification::fake();
         $user = User::factory()->unverified()->create();
@@ -116,9 +117,14 @@ class EmailVerificationTest extends TestCase
 
         $this->actingAs($user)
             ->post(route('verification.otp.verify'), ['otp' => $matches[0]])
-            ->assertRedirect(route('dashboard', absolute: false).'?verified=1');
+            ->assertRedirect(route('login'));
 
-        $this->assertTrue($user->fresh()->hasVerifiedEmail());
+        $this->assertGuest();
+        $this->assertFalse($user->fresh()->hasVerifiedEmail());
+        $this->assertNotNull(AccountSessionLog::query()
+            ->where('user_id', $user->id)
+            ->sole()
+            ->logged_out_at);
     }
 
     public function test_email_is_not_verified_with_invalid_hash(): void

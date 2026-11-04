@@ -1,11 +1,13 @@
 <?php
 
+use App\Http\Controllers\AccountLogController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth'])->group(function () {
     Route::redirect('settings', 'settings/profile');
 
     Route::livewire('settings/profile', 'pages::settings.profile')->name('profile.edit');
+    Route::get('settings/account-logs', [AccountLogController::class, 'index'])->name('account-logs.index');
 });
 
 Route::middleware(['auth', 'verified'])->group(function () {

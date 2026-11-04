@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\SlipAssignment;
 use App\Models\SlipSubmission;
+use App\Models\StudentReference;
 use App\Models\User;
 use App\Support\SlipCatalog;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -13,6 +14,168 @@ use Tests\TestCase;
 class SlipSubmissionTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_client_information_form_prefills_and_locks_imported_student_details(): void
+    {
+        Storage::fake('local');
+        $teacher = User::factory()->create(['role' => 'teacher']);
+        $student = User::factory()->create([
+            'name' => 'Ada Byron',
+            'id_number' => 'CIF-1001',
+            'gender' => 'female',
+            'role' => 'student',
+        ]);
+        StudentReference::create([
+            'id_number' => 'CIF-1001',
+            'name' => 'Ada Lovelace Byron',
+            'gender' => 'female',
+            'course' => 'Computer Science',
+            'year' => '3',
+            'source_data' => [
+                'First Name' => 'Ada',
+                'Middle Name' => 'Lovelace',
+                'Last Name' => 'Byron',
+                'Contact Number' => '09123456789',
+            ],
+        ]);
+        $assignment = SlipAssignment::create([
+            'assigned_by' => $teacher->id,
+            'student_id' => $student->id,
+            'slip' => 'qf-bo-oss-04-client-information-form',
+        ]);
+
+        $response = $this->actingAs($student)
+            ->get(route('assigned-slips.fillup', $assignment))
+            ->assertOk()
+            ->assertSee('09123456789')
+            ->assertSee('Ada')
+            ->assertSee('Lovelace')
+            ->assertSee('Byron')
+            ->assertSee('Computer Science 3');
+        foreach (['last_name', 'first_name', 'middle_name', 'student_id', 'course_year', 'email', 'contact_number'] as $field) {
+            $this->assertMatchesRegularExpression(
+                '/<input\b(?=[^>]*\bid="'.$field.'")(?=[^>]*\breadonly\b)[^>]*>/s',
+                $response->getContent(),
+                "The {$field} field should be read-only when populated from the student record."
+            );
+        }
+
+        $details = [];
+        foreach (SlipCatalog::all()['qf-bo-oss-04-client-information-form']['groups'] as $group) {
+            foreach ($group['fields'] as $field) {
+                if ($field['type'] === 'checkboxes') {
+                    $details[$field['key']] = $field['required']
+                        ? [array_key_first($field['options'])]
+                        : [];
+                } elseif ($field['required']) {
+                    $details[$field['key']] = $field['type'] === 'textarea' ? 'Student answer' : 'Forged value';
+                }
+            }
+        }
+
+        $this->actingAs($student)
+            ->post(route('assigned-slips.submit', $assignment), ['details' => $details])
+            ->assertSessionHasNoErrors();
+
+        $submission = SlipSubmission::query()->where('user_id', $student->id)->firstOrFail();
+        $this->assertSame('Ada', $submission->data['first_name']);
+        $this->assertSame('Lovelace', $submission->data['middle_name']);
+        $this->assertSame('Byron', $submission->data['last_name']);
+        $this->assertSame('CIF-1001', $submission->data['student_id']);
+        $this->assertSame('female', $submission->data['sex']);
+        $this->assertSame('Computer Science 3', $submission->data['course_year']);
+        $this->assertSame('09123456789', $submission->data['contact_number']);
+        $this->assertSame('Student answer', $submission->data['address']);
+    }
+
+    public function test_client_information_form_locks_details_from_the_logged_in_account_without_a_roster_match(): void
+    {
+        $teacher = User::factory()->create(['role' => 'teacher']);
+        $student = User::factory()->create([
+            'name' => 'Grace Hopper',
+            'id_number' => 'CIF-1003',
+            'gender' => 'female',
+            'role' => 'student',
+        ]);
+        $assignment = SlipAssignment::create([
+            'assigned_by' => $teacher->id,
+            'student_id' => $student->id,
+            'slip' => 'qf-bo-oss-04-client-information-form',
+        ]);
+
+        $response = $this->actingAs($student)
+            ->get(route('assigned-slips.fillup', $assignment))
+            ->assertOk()
+            ->assertSee('Grace')
+            ->assertSee('Hopper')
+            ->assertSee('CIF-1003')
+            ->assertSee($student->email);
+
+        foreach (['last_name', 'first_name', 'student_id', 'email'] as $field) {
+            $this->assertMatchesRegularExpression(
+                '/<input\b(?=[^>]*\bid="'.$field.'")(?=[^>]*\breadonly\b)[^>]*>/s',
+                $response->getContent(),
+                "The {$field} field should be read-only when populated from the logged-in account."
+            );
+        }
+    }
+
+    public function test_client_information_form_keeps_unimported_contact_number_editable(): void
+    {
+        Storage::fake('local');
+        $teacher = User::factory()->create(['role' => 'teacher']);
+        $student = User::factory()->create([
+            'name' => 'Grace Hopper',
+            'id_number' => 'CIF-1002',
+            'gender' => 'female',
+            'role' => 'student',
+        ]);
+        StudentReference::create([
+            'id_number' => 'CIF-1002',
+            'name' => 'Grace Hopper',
+            'gender' => 'female',
+            'course' => 'Computer Science',
+            'year' => '4',
+            'source_data' => ['First Name' => 'Grace', 'Last Name' => 'Hopper'],
+        ]);
+        $assignment = SlipAssignment::create([
+            'assigned_by' => $teacher->id,
+            'student_id' => $student->id,
+            'slip' => 'qf-bo-oss-04-client-information-form',
+        ]);
+
+        $response = $this->actingAs($student)
+            ->get(route('assigned-slips.fillup', $assignment))
+            ->assertOk();
+        $this->assertMatchesRegularExpression(
+            '/<input\b(?=[^>]*\bid="contact_number")(?![^>]*\breadonly\b)[^>]*>/s',
+            $response->getContent()
+        );
+
+        $details = [];
+        foreach (SlipCatalog::all()['qf-bo-oss-04-client-information-form']['groups'] as $group) {
+            foreach ($group['fields'] as $field) {
+                if ($field['type'] === 'checkboxes') {
+                    $details[$field['key']] = $field['required']
+                        ? [array_key_first($field['options'])]
+                        : [];
+                } elseif ($field['required']) {
+                    $details[$field['key']] = match ($field['key']) {
+                        'contact_number' => '09876543210',
+                        'address' => 'Student address',
+                        default => 'Student answer',
+                    };
+                }
+            }
+        }
+
+        $this->actingAs($student)
+            ->post(route('assigned-slips.submit', $assignment), ['details' => $details])
+            ->assertSessionHasNoErrors();
+
+        $submission = SlipSubmission::query()->where('user_id', $student->id)->firstOrFail();
+        $this->assertSame('09876543210', $submission->data['contact_number']);
+    }
 
     public function test_every_slip_can_be_submitted_and_its_pdf_viewed(): void
     {

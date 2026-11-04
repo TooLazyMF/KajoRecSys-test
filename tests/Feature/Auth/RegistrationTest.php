@@ -126,7 +126,7 @@ class RegistrationTest extends TestCase
         $this->get(route('registration.verification.notice'))->assertOk();
         $this->from(route('registration.verification.notice'))
             ->post(route('verification.otp.verify'), ['otp' => $matches[0]])
-            ->assertRedirect(route('dashboard', absolute: false).'?verified=1');
+            ->assertRedirect(route('student.dashboard', absolute: false).'?verified=1');
 
         $this->assertAuthenticatedAs($user);
         $this->assertTrue($user->fresh()->hasVerifiedEmail());
