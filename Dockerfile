@@ -1,7 +1,7 @@
 FROM php:8.4-cli-bookworm AS php-base
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends libpq-dev libzip-dev \
+    && apt-get install -y --no-install-recommends libpq-dev libsqlite3-dev libzip-dev \
     && docker-php-ext-install pdo_pgsql pdo_sqlite zip \
     && rm -rf /var/lib/apt/lists/*
 
