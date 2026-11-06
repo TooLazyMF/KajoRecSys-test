@@ -33,7 +33,7 @@ class TrackAccountSession
                 $request->session()->invalidate();
                 $request->session()->regenerateToken();
 
-                return to_route('login')->with('status', 'You were logged out after 10 minutes of inactivity.');
+                return to_route('home')->with('status', 'You were logged out after 10 minutes of inactivity.');
             }
 
             if (! $request->session()->has('account_session_log_id')) {

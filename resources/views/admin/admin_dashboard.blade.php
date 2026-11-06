@@ -39,9 +39,9 @@
                 @foreach ([
                     ['Total Students', $totalStudentsCount, 'Registered students', 'bg-green-100', '♟', 'total-students'],
                     ["Today's Appointments", $todayAppointmentsCount, 'Scheduled today', 'bg-blue-100', '▦', 'todays-appointments'],
-                    ['Pending Approval', $pendingAppointmentsCount, 'Awaiting review', 'bg-yellow-100', '◷', 'waiting-for-appointment-approval'],
+                    ['Pending Appointment Approvals', $pendingAppointmentsCount, 'Appointment requests awaiting review', 'bg-yellow-100', '◷', 'waiting-for-appointment-approval'],
                     ['Missed / Done', $missedDoneAppointmentsCount, 'Finished or missed', 'bg-orange-100', '✓', 'miss-done-appointments'],
-                    ['Active Referrals', $activeReferralsCount, 'Current referrals', 'bg-purple-100', '↗', 'active-referrals'],
+                    ['Referrals Missing Document Details', $activeReferralsCount, 'Missing Document Code, Revision Number, or Control No.', 'bg-purple-100', '↗', 'active-referrals'],
                 ] as [$label, $count, $description, $iconBg, $icon, $modalKey])
                     <button type="button" onclick="document.getElementById('{{ $modalKey }}-modal').showModal()" class="w-full rounded-2xl border p-4 text-left shadow-sm transition hover:-translate-y-1 hover:shadow-md {{ $statCardStyles[$loop->index] }} dark:border-neutral-700 dark:bg-neutral-900 dark:hover:border-green-700">
                         <div class="flex items-center justify-between">
@@ -63,7 +63,7 @@
                         <h2 class="text-lg font-semibold">Monthly Student Report</h2>
                         <button type="button" onclick="this.closest('dialog').close()" class="text-2xl leading-none text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200" aria-label="Close report">&times;</button>
                     </div>
-                    <iframe src="{{ route('guidance.reports.monthly', ['embedded' => 1]) }}" title="Monthly Student Report" class="min-h-0 w-full flex-1 border-0"></iframe>
+                    <iframe src="{{ route('guidance.reports.monthly', ['embedded' => 1], absolute: false) }}" title="Monthly Student Report" class="min-h-0 w-full flex-1 border-0"></iframe>
                 </div>
             </dialog>
 
@@ -176,13 +176,16 @@
                     <div class="flex items-start justify-between gap-4">
                         <div>
                             <p class="text-xs font-bold uppercase tracking-wide text-purple-700 dark:text-purple-400">Slip management</p>
-                            <h2 class="mt-1 text-xl font-bold">Active Referrals</h2>
+                            <h2 class="mt-1 text-xl font-bold">Referrals Missing Document Details</h2>
+                            <p class="mt-1 text-sm text-neutral-500">The count tracks referrals missing Document Code, Revision Number, or Control No. The list may also include referrals awaiting a Class Admission Slip.</p>
                         </div>
                         <button type="button" onclick="this.closest('dialog').close()" class="text-2xl leading-none text-neutral-400" aria-label="Close">&times;</button>
                     </div>
                     <div class="mt-5 divide-y divide-neutral-100 dark:divide-zinc-800">
                         @forelse ($referrals as $row)
-                            @php($referral = $row['assignment'])
+                            @php
+                                $referral = $row['assignment'];
+                            @endphp
                             <div class="py-3">
                                 <div class="flex items-center justify-between gap-3">
                                     <div>
@@ -199,7 +202,7 @@
                                 </details>
                             </div>
                         @empty
-                            <p class="py-3 text-sm text-neutral-500">There are no active referrals.</p>
+                            <p class="py-3 text-sm text-neutral-500">There are no referrals missing document details or needing follow-up.</p>
                         @endforelse
                     </div>
                     <a href="{{ route('guidance.referrals') }}" onclick="this.closest('dialog').close()" class="mt-5 inline-flex rounded-lg bg-purple-700 px-4 py-2 text-sm font-semibold text-white hover:bg-purple-800">View referrals</a>
@@ -237,49 +240,29 @@
                     </div>
                 </section>
 
-                <section class="rounded-2xl border border-neutral-200 bg-white shadow-sm dark:border-neutral-700 dark:bg-neutral-900">
-                    <div class="border-b border-neutral-200 px-6 py-5 dark:border-neutral-700">
-                        <h2 class="text-lg font-semibold">Done Appointments</h2>
-                        <p class="text-sm text-neutral-500">Recently completed sessions</p>
-                    </div>
-                    <div class="divide-y divide-neutral-100 dark:divide-neutral-800">
-                        @forelse ($completedAppointments->take(3) as $appointment)
-                            <div class="px-6 py-4">
-                                <p class="font-medium">{{ $appointment->requester->name }}</p>
-                                <p class="mt-1 text-xs text-neutral-500">{{ $appointment->completed_at?->format('M j, Y g:i A') ?? 'Completed' }}</p>
-                            </div>
-                        @empty
-                            <p class="p-6 text-sm text-neutral-500">No done appointments yet.</p>
-                        @endforelse
-                    </div>
-                    <a href="{{ route('guidance.records.index', 'appointments') }}" class="block border-t border-neutral-200 px-6 py-4 text-sm font-medium text-green-700 hover:underline dark:border-neutral-700 dark:text-green-400">View appointment history</a>
-                </section>
-            </div>
-
-            <section id="student-import" class="scroll-mt-6 rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm dark:border-neutral-700 dark:bg-neutral-900">
-                <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                <section id="student-import" class="scroll-mt-6 rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm dark:border-neutral-700 dark:bg-neutral-900">
                     <div>
                         <p class="text-xs font-bold uppercase tracking-wide text-green-700 dark:text-green-400">Registration reference</p>
                         <h2 class="mt-1 text-lg font-semibold">{{ $hasImportedStudentFile ? 'Update the imported file' : 'Import students file' }}</h2>
-                        <p class="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
-                            Upload the complete Excel (.xlsx) roster containing Code, name columns, Sex, Year, and Course. Each school-year update refreshes active student information; students missing from the file are deactivated while their files are preserved.
+                        <p class="mt-2 text-sm text-neutral-500 dark:text-neutral-400">
+                            Upload the complete Excel (.xlsx) roster with Code, name, Sex, Year, and Course. Missing students are deactivated while their files are preserved.
                         </p>
                     </div>
-                    <form method="POST" action="{{ route('admin.students.import') }}" enctype="multipart/form-data" class="flex flex-col gap-3 sm:flex-row sm:items-end">
+                    <form method="POST" action="{{ route('admin.students.import') }}" enctype="multipart/form-data" class="mt-5 space-y-4">
                         @csrf
-                        <label class="text-sm font-medium text-neutral-700 dark:text-neutral-200">
+                        <label class="block text-sm font-medium text-neutral-700 dark:text-neutral-200">
                             Student file
                             <input type="file" name="student_file" accept=".xlsx,.csv,.txt,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv,text/plain" required class="mt-1 block w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm dark:border-neutral-600 dark:bg-neutral-800">
                         </label>
-                        <button type="submit" class="rounded-lg bg-[#09ba44] px-4 py-2.5 text-sm font-semibold text-[#092010] hover:bg-[#079b38] dark:bg-[#54d180] dark:text-zinc-950 dark:hover:bg-[#6be495]">
-                            {{ $hasImportedStudentFile ? 'Update the imported file' : 'Import students file' }}
+                        <button type="submit" class="w-full rounded-lg bg-[#09ba44] px-4 py-2.5 text-sm font-semibold text-[#092010] hover:bg-[#079b38] dark:bg-[#54d180] dark:text-zinc-950 dark:hover:bg-[#6be495]">
+                            {{ $hasImportedStudentFile ? 'Update students file' : 'Import students file' }}
                         </button>
                     </form>
-                </div>
-                @error('student_file')
-                    <p class="mt-3 text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
-                @enderror
-            </section>
+                    @error('student_file')
+                        <p class="mt-3 text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
+                    @enderror
+                </section>
+            </div>
 
             <section class="rounded-2xl border border-amber-200 p-6 shadow-sm dark:border-amber-900/50 dark:bg-amber-950/20">
                 <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -290,19 +273,6 @@
                     </div>
                     <a href="{{ route('guidance.records.archived') }}" class="inline-flex items-center justify-center rounded-lg border border-amber-300 bg-white px-4 py-2.5 text-sm font-semibold text-amber-800 hover:bg-amber-100 dark:border-amber-700 dark:bg-transparent dark:text-amber-200 dark:hover:bg-amber-900/30">
                         Open folder ({{ $archivedStudentsCount }})
-                    </a>
-                </div>
-            </section>
-
-            <section class="rounded-2xl border border-green-200 p-6 shadow-sm dark:border-green-900/50 dark:bg-green-950/20">
-                <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                        <p class="text-xs font-bold uppercase tracking-wide text-green-700 dark:text-green-400">Student files</p>
-                        <h2 class="mt-1 text-lg font-semibold">Active Student Profiles</h2>
-                        <p class="mt-1 text-sm text-green-900/70 dark:text-green-200/70">Browse every active student account, including students who have not submitted a form or requested an appointment yet.</p>
-                    </div>
-                    <a href="{{ route('guidance.records.index', 'all') }}" class="inline-flex items-center justify-center rounded-lg border border-green-300 bg-white px-4 py-2.5 text-sm font-semibold text-green-800 hover:bg-green-50 dark:border-green-700 dark:bg-transparent dark:text-green-200 dark:hover:bg-green-900/30">
-                        Open folders ({{ $totalStudentsCount }})
                     </a>
                 </div>
             </section>
@@ -319,7 +289,7 @@
                     <p class="text-xs font-bold uppercase tracking-wide text-blue-700 dark:text-blue-400">Slip management</p>
                     <h2 class="mt-1 text-lg font-bold">Received Student Referral Slips</h2>
                     <p class="mt-1 text-sm text-gray-500 dark:text-zinc-400">
-                        Record the referral receipt and issue the Class Admission Slip when needed. Enter the document-control values separately after they are issued by the higher office; the referral PDF becomes available once all four are saved.
+                        Record the referral receipt and issue the Class Admission Slip when needed. Enter the document-control identifiers separately when available; the referral PDF becomes available once all document-control values are present. Effectivity Date is automatically recorded when the counselor issues the Class Admission Slip.
                     </p>
                 </div>
 
@@ -351,7 +321,9 @@
                             </thead>
                             <tbody class="block divide-y divide-gray-100 dark:divide-zinc-800">
                                 @foreach ($referrals as $row)
-                                    @php($referral = $row['assignment'])
+                                    @php
+                                        $referral = $row['assignment'];
+                                    @endphp
                                     <tr class="grid grid-cols-1 gap-x-6 gap-y-0 py-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,2fr)]">
                                         <td class="order-1 block px-4 py-2 text-left align-middle">
                                             <span class="mb-1 block text-[11px] font-bold uppercase tracking-wide text-gray-500 dark:text-zinc-400">Student</span>
@@ -363,7 +335,9 @@
                                             {{ $referral->completed_at?->format('M j, Y g:i A') ?? 'Received' }}
                                         </td>
                                         <td class="order-4 block border-t border-gray-100 px-4 py-3 text-center align-middle dark:border-zinc-800 md:col-start-3 md:row-start-1 md:row-span-3 md:border-l md:border-t-0 md:pl-6">
-                                            @php($isReferralControlFormOld = old('referral_id') == $referral->id)
+                                            @php
+                                                $isReferralControlFormOld = old('referral_id') == $referral->id;
+                                            @endphp
                                             <div class="space-y-3 text-left">
                                                 <p class="text-center text-xs font-semibold {{ $row['referral_pdf_ready'] ? 'text-green-700 dark:text-green-400' : 'text-amber-700 dark:text-amber-400' }}">
                                                     {{ $row['referral_pdf_ready'] ? 'Referral PDF ready' : 'Referral PDF locked until all four values are entered' }}
@@ -385,7 +359,8 @@
                                                         </label>
                                                         <label class="block text-[11px] font-medium text-gray-600 dark:text-zinc-300">
                                                             Effectivity Date
-                                                            <input type="date" name="details[effectivity_date]" value="{{ $isReferralControlFormOld ? old('details.effectivity_date') : ($row['document_control_data']['effectivity_date'] ?? '') }}" required class="mt-1 w-full rounded-md border-gray-300 px-2 py-1.5 text-xs text-zinc-900 focus:border-green-600 focus:ring-green-600 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100">
+                                                            <input type="date" value="{{ $row['document_control_data']['effectivity_date'] ?? '' }}" readonly class="mt-1 w-full rounded-md border-gray-300 bg-gray-100 px-2 py-1.5 text-xs text-zinc-900 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100">
+                                                            <span class="mt-1 block text-[10px] text-gray-500 dark:text-zinc-400">Recorded when the counselor issues the Class Admission Slip.</span>
                                                         </label>
                                                         <label class="block text-[11px] font-medium text-gray-600 dark:text-zinc-300">
                                                             Control No.

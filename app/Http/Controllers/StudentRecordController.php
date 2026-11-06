@@ -14,6 +14,39 @@ use Illuminate\View\View;
 
 class StudentRecordController extends Controller
 {
+    public function dashboard(Request $request): View
+    {
+        $this->authorizeGuidance($request);
+
+        $students = User::query()
+            ->where('role', 'student')
+            ->with([
+                'slipSubmissions' => fn ($query) => $query
+                    ->where('slip', 'qf-bo-oss-04-client-information-form')
+                    ->where('review_status', 'approved')
+                    ->latest(),
+                'slipAssignments' => fn ($query) => $query
+                    ->whereIn('slip', ['student-referral-slip', 'class-admission-slip'])
+                    ->where('status', 'approved')
+                    ->whereNotNull('completed_at')
+                    ->with([
+                        'slipSubmission',
+                        'appointments' => fn ($appointments) => $appointments
+                            ->whereIn('status', ['accepted', 'done', 'missed'])
+                            ->orderByDesc('scheduled_at'),
+                    ]),
+                'appointments' => fn ($query) => $query
+                    ->whereIn('status', ['done', 'missed'])
+                    ->whereNotNull('completed_at')
+                    ->with('reviewer')
+                    ->orderByDesc('completed_at'),
+            ])
+            ->orderBy('name')
+            ->get();
+
+        return view('admin.student-records', compact('students'));
+    }
+
     public function monthlyReport(Request $request): View
     {
         $this->authorizeGuidance($request);

@@ -1,19 +1,22 @@
-<x-layouts::app :title="__('Monthly Student Report')">
-    <style>
-        :has(main.embedded-report) nav {
-            display: none !important;
-        }
+<!DOCTYPE html>
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" data-system-theme>
+    <head>
+        @include('partials.head')
+        <meta name="csrf-token" content="{{ csrf_token() }}">
+        <script>
+            const colorScheme = window.matchMedia('(prefers-color-scheme: dark)');
+            const applySystemTheme = () => document.documentElement.classList.toggle('dark', colorScheme.matches);
 
-        main.embedded-report a[href$="/guidance-dashboard"] {
-            display: none !important;
-        }
-    </style>
-    <main class="embedded-report min-h-screen bg-[#f6f5f1] p-5 text-slate-900 dark:bg-[#111712] dark:text-zinc-100 sm:p-6 lg:p-8">
+            applySystemTheme();
+            colorScheme.addEventListener('change', applySystemTheme);
+        </script>
+    </head>
+    <body class="min-h-screen bg-[#f6f5f1] text-slate-900 dark:bg-[#111712] dark:text-zinc-100">
+    <main class="min-h-screen p-5 sm:p-6 lg:p-8">
         <div class="mx-auto max-w-6xl space-y-6">
             <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                 <div>
-                    <a href="{{ route('guidance.dashboard') }}" class="text-sm font-medium text-[#28643a] hover:underline dark:text-[#91dfa6]">← Back to dashboard</a>
-                    <p class="mt-5 text-sm font-medium text-[#28643a] dark:text-[#91dfa6]">Guidance Office</p>
+                    <p class="text-sm font-medium text-[#28643a] dark:text-[#91dfa6]">Guidance Office</p>
                     <h1 class="mt-1 text-3xl font-bold">Monthly Student Report</h1>
                     <p class="mt-2 text-sm text-neutral-500 dark:text-neutral-400">Students with scheduled appointment activity for {{ $monthLabel }}.</p>
                 </div>
@@ -66,4 +69,6 @@
             </section>
         </div>
     </main>
-</x-layouts::app>
+    @fluxScripts
+    </body>
+</html>

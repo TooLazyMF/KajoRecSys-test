@@ -37,12 +37,13 @@
                     About
                 </a>
 
-                <a
-                    href="#contact"
-                    class="whitespace-nowrap text-sm font-medium text-gray-800 transition hover:text-[#176b3a]"
+                <button
+                    type="button"
+                    data-show-panel="contact"
+                    class="whitespace-nowrap border-0 bg-transparent p-0 text-sm font-medium text-gray-800 transition hover:text-[#176b3a]"
                 >
-                    Contact
-                </a>
+                    Contact Us
+                </button>
 
             </nav>
 
@@ -63,20 +64,22 @@
                 @else
 
                     <!-- LOGIN -->
-                    <a
-                        href="{{ route('login') }}"
+                    <button
+                        type="button"
+                        data-show-panel="login"
                         class="rounded-lg border border-[#176b3a] bg-white px-5 py-2.5 text-sm font-semibold text-[#176b3a] transition hover:bg-[#176b3a] hover:text-white"
                     >
                         Login
-                    </a>
+                    </button>
 
                     <!-- SIGN UP -->
-                    <a
-                        href="{{ route('register') }}"
-                        class="rounded-lg bg-[#176b3a] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#12552e]"
+                    <button
+                        type="button"
+                        data-show-panel="register"
+                        class="rounded-lg border-0 bg-[#176b3a] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#12552e]"
                     >
                         Sign Up
-                    </a>
+                    </button>
 
                 @endauth
 

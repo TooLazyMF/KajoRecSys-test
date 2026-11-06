@@ -31,18 +31,23 @@
                 </label>
                 <p class="text-sm text-neutral-500 dark:text-neutral-400"><span id="manage_student_count">{{ $students->count() }}</span> registered {{ str()->plural('student', $students->count()) }}</p>
                 <div id="manage_student_groups" class="space-y-3">
-                    @forelse ($students->groupBy(fn ($student) => $studentReferences->get($student->id_number)?->course ?: 'Course not listed')->sortKeys() as $course => $courseStudents)
-                        <details class="manage-course-group group overflow-hidden rounded-xl border border-neutral-200 dark:border-neutral-700" data-course-group>
-                            <summary class="flex cursor-pointer list-none items-center justify-between gap-3 bg-neutral-50 px-5 py-4 hover:bg-emerald-50 dark:bg-neutral-800 dark:hover:bg-neutral-700">
-                                <span><span class="block text-base font-semibold">{{ $course }}</span><span class="text-sm text-neutral-500 dark:text-neutral-400"><span data-group-count>{{ $courseStudents->count() }}</span> {{ str()->plural('student', $courseStudents->count()) }}</span></span><span class="transition group-open:rotate-180" aria-hidden="true">⌄</span>
-                            </summary>
-                            <div class="space-y-5 border-t border-neutral-200 p-4 dark:border-neutral-700">
-                                @foreach ($courseStudents->groupBy(fn ($student) => $studentReferences->get($student->id_number)?->year ?: 'Year level not listed')->sortKeys() as $yearLevel => $yearStudents)
+                    @forelse ($students->groupBy(fn ($student) => $studentReferences->get(\App\Models\StudentReference::normalizeIdNumber($student->id_number))?->course ?: '')->sortKeys() as $course => $courseStudents)
+                        @if (filled($course))
+                            <details class="manage-course-group group overflow-hidden rounded-xl border border-neutral-200 dark:border-neutral-700" data-course-group>
+                                <summary class="flex cursor-pointer list-none items-center justify-between gap-3 bg-neutral-50 px-5 py-4 hover:bg-emerald-50 dark:bg-neutral-800 dark:hover:bg-neutral-700">
+                                    <span><span class="block text-base font-semibold">{{ $course }}</span><span class="text-sm text-neutral-500 dark:text-neutral-400"><span data-group-count>{{ $courseStudents->count() }}</span> {{ str()->plural('student', $courseStudents->count()) }}</span></span><span class="transition group-open:rotate-180" aria-hidden="true">⌄</span>
+                                </summary>
+                                <div class="space-y-5 border-t border-neutral-200 p-4 dark:border-neutral-700">
+                        @else
+                            <div class="space-y-5" data-course-group>
+                                <span class="hidden" data-group-count>{{ $courseStudents->count() }}</span>
+                        @endif
+                                @foreach ($courseStudents->groupBy(fn ($student) => $studentReferences->get(\App\Models\StudentReference::normalizeIdNumber($student->id_number))->year)->sortKeys() as $yearLevel => $yearStudents)
                                     <section data-year-group>
                                         <h3 class="mb-3 text-sm font-bold uppercase tracking-wide text-neutral-600 dark:text-neutral-300">{{ $yearLevel }}</h3>
                                         <div class="grid gap-3 md:grid-cols-2">
                                             @foreach ($yearStudents as $user)
-                                                @php($reference = $studentReferences->get($user->id_number))
+                                                @php($reference = $studentReferences->get(\App\Models\StudentReference::normalizeIdNumber($user->id_number)))
                                                 <article class="manage-student-card rounded-lg border border-neutral-200 p-4 dark:border-neutral-700" data-search="{{ strtolower($user->name.' '.$user->id_number.' '.$user->email.' '.$course.' '.$reference?->year) }}">
                                                     <div class="flex flex-wrap items-start justify-between gap-3">
                                                         <h4 class="text-xl font-bold">{{ $user->name }}</h4>
@@ -75,8 +80,12 @@
                                         </div>
                                     </section>
                                 @endforeach
+                        @if (filled($course))
+                                </div>
+                            </details>
+                        @else
                             </div>
-                        </details>
+                        @endif
                     @empty
                         <p class="rounded-lg bg-neutral-50 p-5 text-center text-neutral-500 dark:bg-neutral-800">No student accounts are registered.</p>
                     @endforelse

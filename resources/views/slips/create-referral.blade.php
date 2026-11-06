@@ -34,13 +34,14 @@
                             <input id="student_search" type="search" autocomplete="off" placeholder="Search name, ID, or course…" class="mt-4 w-full rounded-lg border-zinc-300 bg-white px-4 py-3 text-base shadow-sm focus:border-green-700 focus:ring-green-700 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100">
                         </div>
                         <div id="student_picker_list" class="max-h-[58vh] overflow-y-auto p-4 sm:p-6">
-                            @foreach ($students->groupBy(fn ($student) => $studentReferences->get($student->id_number)?->course ?: 'Course not listed')->sortKeys() as $course => $courseStudents)
+                            @foreach ($students->groupBy(fn ($student) => $studentReferences->get(\App\Models\StudentReference::normalizeIdNumber($student->id_number))?->course ?: 'Course not listed')->sortKeys() as $course => $courseStudents)
                                 <section class="student-course-group mb-6 last:mb-0" data-course-group>
                                     <h3 class="mb-2 border-b border-zinc-200 pb-2 text-base font-bold text-emerald-800 dark:border-zinc-700 dark:text-emerald-300">{{ $course }}</h3>
                                     <div class="grid gap-2 sm:grid-cols-2">
                                         @foreach ($courseStudents as $student)
-                                            @php($studentCourse = $studentReferences->get($student->id_number)?->course)
-                                            @php($studentYear = $studentReferences->get($student->id_number)?->year)
+                                            @php($studentReference = $studentReferences->get(\App\Models\StudentReference::normalizeIdNumber($student->id_number)))
+                                            @php($studentCourse = $studentReference?->course)
+                                            @php($studentYear = $studentReference?->year)
                                             <button type="button" class="student-choice rounded-xl border border-zinc-200 p-4 text-left hover:border-emerald-500 hover:bg-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-600 dark:border-zinc-700 dark:hover:bg-zinc-800" data-student-id="{{ $student->id }}" data-id-number="{{ $student->id_number }}" data-name="{{ $student->name }}" data-sex="{{ ucfirst($student->gender) }}" data-program-year="{{ trim(implode(' ', array_filter([$studentCourse, $studentYear]))) }}" data-search="{{ strtolower($student->name.' '.$student->id_number.' '.$studentCourse.' '.$studentYear) }}">
                                                 <span class="block text-base font-semibold">{{ $student->name }}</span><span class="mt-1 block text-sm text-zinc-600 dark:text-zinc-300">{{ $student->id_number ?: 'No student ID' }} · {{ trim(implode(' ', array_filter([$studentCourse, $studentYear]))) ?: 'Course not listed' }}</span>
                                             </button>
@@ -130,7 +131,7 @@
                             </label>
                         </div>
                         <div>
-                            <p class="text-sm text-zinc-500 dark:text-zinc-400">Enter the number of days first, then select the date for each absence or tardy.</p>
+                            <p class="text-sm text-zinc-500 dark:text-zinc-400">Enter the number of days first, then select the date for each absence or tardy. One referral will be sent for each selected date.</p>
                             <div id="absence_dates" class="mt-3 grid gap-3 sm:grid-cols-2"></div>
                         </div>
 

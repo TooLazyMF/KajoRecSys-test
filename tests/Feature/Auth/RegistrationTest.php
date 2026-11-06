@@ -38,6 +38,13 @@ class RegistrationTest extends TestCase
             ->assertSee(route('login.store'), false)
             ->assertSee(route('register.store'), false)
             ->assertSee('data-auth-view="login"', false)
+            ->assertSee('data-contact-content', false)
+            ->assertSee('data-welcome-content', false)
+            ->assertSee('data-show-panel="contact"', false)
+            ->assertSee('data-show-panel="login"', false)
+            ->assertSee('data-show-panel="register"', false)
+            ->assertSee('Contact Us')
+            ->assertSee('mailto:kajorec@gmail.com')
             ->assertSee('name="_welcome_panel" value="register"', false)
             ->assertSee('name="password_confirmation"', false)
             ->assertSee('Use an email address you can access. We will send a verification code; verify it to use your account.')
@@ -51,7 +58,10 @@ class RegistrationTest extends TestCase
             ->assertSee('name="theme-color" content="#20783e"', false)
             ->assertSee('class="sticky top-0 z-50 border-b border-gray-200 bg-white"', false)
             ->assertSee('body.welcome-shell > header', false)
-            ->assertSee('width: min(1040px, 100%);', false);
+            ->assertSee('width: min(1180px, 100%);', false)
+            ->assertSee('.page[data-mode="contact"] .form-panel {', false)
+            ->assertSee('display: none;', false)
+            ->assertSee('.page[data-mode="contact"] .welcome-panel {', false);
     }
 
     public function test_registration_errors_return_to_the_registration_panel_on_the_welcome_page(): void

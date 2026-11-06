@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AccountLogController;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth'])->group(function () {
@@ -12,6 +13,12 @@ Route::middleware(['auth'])->group(function () {
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::livewire('settings/appearance', 'pages::settings.appearance')->name('appearance.edit');
+
+    Route::post('settings/security/confirmation', function (Request $request) {
+        $request->session()->put('url.intended', route('security.edit'));
+
+        return response()->noContent();
+    })->name('security.confirmation.prepare');
 
     Route::livewire('settings/security', 'pages::settings.security')
         /* @chisel-password-confirmation */

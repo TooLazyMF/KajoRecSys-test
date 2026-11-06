@@ -50,6 +50,17 @@
                 </div>
             @endif
 
+            @if ($isStudentRequest && $assignment->assigned_by === auth()->id() && $assignment->status === 'pending' && !$existingSubmission)
+                <form
+                    id="cancel-student-slip-request"
+                    method="POST"
+                    action="{{ route('assigned-slips.cancel-request', $assignment) }}"
+                    onsubmit="return confirm('Cancel this form request? It will be removed from your pending slips.')"
+                >
+                    @csrf
+                </form>
+            @endif
+
             <form method="POST" action="{{ route('assigned-slips.submit', $assignment) }}" enctype="multipart/form-data" class="space-y-6">
                 @csrf
                 @if ($selectedStudent)
@@ -177,12 +188,22 @@
                 @endif
 
                 <div class="flex justify-end gap-3">
-                    <a
-                        href="{{ route('student.dashboard') }}"
-                        class="inline-flex items-center justify-center rounded-lg border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 transition hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
-                    >
-                        Cancel
-                    </a>
+                    @if ($isStudentRequest && $assignment->assigned_by === auth()->id() && $assignment->status === 'pending' && !$existingSubmission)
+                        <button
+                            type="submit"
+                            form="cancel-student-slip-request"
+                            class="inline-flex items-center justify-center rounded-lg border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 transition hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
+                        >
+                            Cancel request
+                        </button>
+                    @else
+                        <a
+                            href="{{ route('student.dashboard') }}"
+                            class="inline-flex items-center justify-center rounded-lg border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 transition hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
+                        >
+                            Cancel
+                        </a>
+                    @endif
                     <flux:button variant="primary" type="submit">
                         {{ $isTeacherSubmittedReferral
                             ? 'Submit to Guidance Counselor'

@@ -119,14 +119,6 @@
                             {{ __('Appointment Requests') }}
                         </flux:sidebar.item>
                         <flux:sidebar.item
-                            icon="clipboard-document-check"
-                            :href="route('guidance.slip-review')"
-                            :current="request()->routeIs('guidance.slip-review')"
-                            wire:navigate
-                        >
-                            {{ __('Review Submissions') }}
-                        </flux:sidebar.item>
-                        <flux:sidebar.item
                             icon="inbox"
                             :href="route('guidance.referrals')"
                             :current="false"
@@ -134,20 +126,11 @@
                             {{ __('Received Referrals') }}
                         </flux:sidebar.item>
                         <flux:sidebar.item
-                            icon="document-text"
-                            :href="route('guidance.cif.index')"
-                            :current="request()->routeIs('guidance.cif.*')"
-                            wire:navigate
-                        >
-                            {{ __('Student CIF') }}
-                        </flux:sidebar.item>
-                        <flux:sidebar.item
                             icon="archive-box"
-                            :href="route('guidance.records.index', 'all')"
-                            :current="request()->routeIs('guidance.records.*')"
-                            wire:navigate
+                            :href="route('guidance.students-records')"
+                            :current="request()->routeIs('guidance.students-records') || request()->routeIs('guidance.records.*') || request()->routeIs('guidance.cif.*')"
                         >
-                            {{ __('Appointment & Slip History') }}
+                            {{ __('Students Records') }}
                         </flux:sidebar.item>
                         <flux:sidebar.item
                             icon="users"

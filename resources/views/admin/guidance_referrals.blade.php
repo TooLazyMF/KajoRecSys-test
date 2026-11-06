@@ -8,7 +8,6 @@
                     <h1 class="mt-1 text-3xl font-bold">Received Student Referral Slips</h1>
                     <p class="mt-2 text-sm text-neutral-500 dark:text-neutral-400">Manage referral documents, document-control details, and follow-up forms.</p>
                 </div>
-                <a href="{{ route('guidance.slip-review') }}" class="inline-flex items-center justify-center rounded-lg bg-purple-700 px-4 py-2 text-sm font-semibold text-white hover:bg-purple-800">Review submissions</a>
             </div>
 
             <section class="overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm dark:border-neutral-700 dark:bg-neutral-900">
@@ -79,7 +78,7 @@
                                                     {{ $row['referral_pdf_ready'] ? 'Referral PDF ready' : 'Referral PDF locked until all four values are entered' }}
                                                 </p>
                                                 @if (! $row['referral_pdf_ready'] && $referral->slipSubmission)
-                                                    <button type="button" onclick="document.getElementById('referral-preview-modal-{{ $referral->id }}').showModal()" class="block w-full text-center text-xs font-semibold text-blue-700 underline dark:text-blue-300">Preview referral form</button>
+                                                    <button type="button" onclick="document.getElementById('referral-preview-modal-{{ $referral->id }}').showModal()" class="block w-full py-1 text-center text-lg font-semibold text-blue-700 underline dark:text-blue-300">Preview referral form</button>
                                                     <dialog id="referral-preview-modal-{{ $referral->id }}" class="h-[90vh] w-[min(72rem,calc(100%-2rem))] max-w-none rounded-2xl border border-neutral-200 bg-white p-0 shadow-2xl backdrop:bg-black/50 dark:border-neutral-700 dark:bg-neutral-900">
                                                         <div class="flex h-full flex-col">
                                                             <div class="flex items-center justify-between border-b border-neutral-200 px-5 py-4 dark:border-neutral-700">
@@ -91,7 +90,6 @@
                                                     </dialog>
                                                 @endif
                                                 @if ($row['client_information_submission'])
-                                                    <button type="button" onclick="document.getElementById('cif-preview-modal-{{ $referral->id }}').showModal()" class="block w-full text-center text-xs font-semibold text-purple-700 underline dark:text-purple-300">View filled CIF</button>
                                                     <dialog id="cif-preview-modal-{{ $referral->id }}" class="h-[90vh] w-[min(72rem,calc(100%-2rem))] max-w-none rounded-2xl border border-neutral-200 bg-white p-0 shadow-2xl backdrop:bg-black/50 dark:border-neutral-700 dark:bg-neutral-900">
                                                         <div class="flex h-full flex-col">
                                                             <div class="flex items-center justify-between border-b border-neutral-200 px-5 py-4 dark:border-neutral-700">

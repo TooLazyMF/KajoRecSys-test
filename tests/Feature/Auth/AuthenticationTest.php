@@ -15,7 +15,11 @@ class AuthenticationTest extends TestCase
     {
         $response = $this->get(route('login'));
 
-        $response->assertOk();
+        $response->assertOk()
+            ->assertSee('Contact Us')
+            ->assertSee('We are the researchers behind KajoRec.')
+            ->assertSee('mailto:kajorec@gmail.com')
+            ->assertSee('Support hours: 8:00 AM–3:00 PM.');
     }
 
     public function test_users_can_authenticate_using_the_login_screen(): void

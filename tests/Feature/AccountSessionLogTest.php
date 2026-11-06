@@ -97,7 +97,8 @@ class AccountSessionLogTest extends TestCase
 
         $this->travel(10)->minutes();
         $this->get(route('student.dashboard'))
-            ->assertRedirect(route('login'));
+            ->assertRedirect(route('home'))
+            ->assertSessionHas('status', 'You were logged out after 10 minutes of inactivity.');
 
         $this->assertGuest();
         $this->assertSame(

@@ -136,7 +136,7 @@
             flex: 1;
             place-items: center;
             width: 100%;
-            padding: 30px 32px;
+            padding: 8px 32px;
         }
 
         button,
@@ -149,8 +149,8 @@
             position: relative;
             display: grid;
             grid-template-columns: 1fr 1fr;
-            width: min(1040px, 100%);
-            min-height: 620px;
+            width: min(1180px, 100%);
+            min-height: min(560px, calc(100dvh - 105px));
             overflow: hidden;
             background: var(--surface);
             border: 1px solid rgba(41, 42, 37, 0.07);
@@ -172,7 +172,7 @@
             display: flex;
             flex-direction: column;
             justify-content: center;
-            padding: 56px clamp(32px, 6vw, 76px);
+            padding: 20px clamp(32px, 4vw, 52px);
             transition: left 700ms cubic-bezier(0.22, 1, 0.36, 1);
         }
 
@@ -184,7 +184,7 @@
             display: inline-flex;
             align-items: center;
             gap: 11px;
-            margin-bottom: 42px;
+            margin-bottom: 16px;
             color: var(--heading);
             font-size: 14px;
             font-weight: 700;
@@ -242,10 +242,44 @@
             gap: 16px;
         }
 
+        [data-auth-view="register"] .form-fields {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 8px;
+        }
+
+        [data-auth-view="register"] .name-fields,
+        [data-auth-view="register"] .field[for="register-id-number"],
+        [data-auth-view="register"] .submit-button {
+            grid-column: 1 / -1;
+        }
+
+        [data-auth-view="register"] .form-intro {
+            margin-bottom: 6px;
+        }
+
+        [data-auth-view="register"] .field {
+            gap: 5px;
+        }
+
+        [data-auth-view="register"] .field input,
+        [data-auth-view="register"] .field select {
+            min-height: 42px;
+        }
+
+        [data-auth-view="register"] .switch-copy {
+            margin-top: 8px;
+        }
+
         .name-fields {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 16px;
+        }
+
+        @media (min-width: 1000px) {
+            [data-auth-view="register"] .name-fields {
+                grid-template-columns: repeat(4, minmax(0, 1fr));
+            }
         }
 
         @media (max-width: 520px) {
@@ -390,7 +424,6 @@
             display: flex;
             flex-direction: column;
             justify-content: space-between;
-            min-height: 100%;
             overflow: hidden;
             padding: 48px clamp(32px, 5vw, 64px);
             background: var(--welcome-gradient);
@@ -427,9 +460,94 @@
 
         .welcome-top,
         .welcome-copy,
+        .contact-content,
         .welcome-footer {
             position: relative;
             z-index: 1;
+        }
+
+        .welcome-copy,
+        .contact-content {
+            transition: opacity 240ms ease, transform 240ms ease, visibility 240ms;
+        }
+
+        .contact-content {
+            visibility: hidden;
+            opacity: 0;
+            transform: translateY(12px);
+        }
+
+        .page[data-mode="contact"] .welcome-copy {
+            visibility: hidden;
+            opacity: 0;
+            transform: translateY(-12px);
+        }
+
+        .page[data-mode="contact"] .contact-content {
+            visibility: visible;
+            opacity: 1;
+            transform: translateY(-50%);
+        }
+
+        .contact-content {
+            position: absolute;
+            top: 50%;
+            right: clamp(32px, 5vw, 64px);
+            left: clamp(32px, 5vw, 64px);
+            width: auto;
+            margin: 0;
+            transform: translateY(calc(-50% + 12px));
+        }
+
+        .contact-cards {
+            display: grid;
+            gap: 12px;
+            margin-top: 28px;
+        }
+
+        .contact-card {
+            padding: 16px 18px;
+            border: 1px solid rgba(63, 89, 69, 0.18);
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.34);
+            color: var(--welcome-copy);
+        }
+
+        .contact-card-label {
+            display: block;
+            margin-bottom: 7px;
+            color: var(--welcome-top);
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+        }
+
+        .contact-card a {
+            color: var(--primary-ink);
+            font-size: 16px;
+            font-weight: 700;
+            text-decoration: none;
+        }
+
+        .contact-card a:hover {
+            text-decoration: underline;
+        }
+
+        .contact-back {
+            margin-top: 22px;
+            padding: 0;
+            border: 0;
+            background: transparent;
+            color: var(--primary-ink);
+            cursor: pointer;
+            font: inherit;
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        .contact-back:hover {
+            text-decoration: underline;
         }
 
         .welcome-top {
@@ -566,6 +684,21 @@
             .page[data-mode="register"] .form-panel {
                 grid-row: 1;
             }
+
+            .page[data-mode="contact"] {
+                min-height: min(680px, calc(100dvh - 120px));
+            }
+
+            .page[data-mode="contact"] .form-panel {
+                display: none;
+            }
+
+            .page[data-mode="contact"] .welcome-panel {
+                grid-row: 1;
+                min-height: min(680px, calc(100dvh - 120px));
+                padding: 28px clamp(20px, 5vw, 36px);
+            }
+
         }
 
         @media (max-width: 640px) {
@@ -760,7 +893,7 @@
                                 <input id="register-middle-initial" name="middle_initial" type="text" value="{{ old('middle_initial') }}" maxlength="10" autocomplete="additional-name" placeholder="e.g. A">
                                 @error('middle_initial')<span class="field-error">{{ $message }}</span>@enderror
                             </label>
-                            <label class="field" for="register-name-extension">Name extension (optional)
+                            <label class="field" for="register-name-extension">Suffix (optional)
                                 <input id="register-name-extension" name="name_extension" type="text" value="{{ old('name_extension') }}" maxlength="20" placeholder="e.g. Jr., III">
                                 @error('name_extension')<span class="field-error">{{ $message }}</span>@enderror
                             </label>
@@ -866,15 +999,16 @@
                     <button class="text-button" type="button" data-show-panel="login">Sign in</button>
                 </p>
             </div>
+
             </section>
 
-            <aside class="welcome-panel" aria-label="Welcome to KAJOREC">
+            <aside class="welcome-panel" aria-label="KAJOREC information">
             <div class="welcome-top">
                 <span>Guidance Office Records</span>
                 <span class="online-indicator">Here to support you</span>
             </div>
 
-            <div class="welcome-copy">
+            <div class="welcome-copy" data-welcome-content>
                 <p class="eyebrow">Benguet State University · Bokod Campus</p>
                 <h2 class="welcome-title">A clearer path to <span>wellbeing.</span></h2>
                 <p class="welcome-description">
@@ -882,6 +1016,25 @@
                     and appointments designed around your wellbeing.
                 </p>
             </div>
+
+            <section class="contact-content" data-contact-content inert aria-hidden="true" aria-labelledby="contact-heading">
+                <p class="eyebrow">KAJOREC SUPPORT</p>
+                <h2 class="welcome-title" id="contact-heading" tabindex="-1">Contact <span>Us</span></h2>
+                <p class="welcome-description">We are the researchers behind KajoRec. Get in touch if you need help with your account or signing in.</p>
+
+                <div class="contact-cards">
+                    <article class="contact-card">
+                        <span class="contact-card-label">Email</span>
+                        <a href="mailto:kajorec@gmail.com">kajorec@gmail.com</a>
+                    </article>
+                    <article class="contact-card">
+                        <span class="contact-card-label">Support hours</span>
+                        <strong>8:00 AM–3:00 PM</strong>
+                    </article>
+                </div>
+
+                <button class="contact-back" type="button" data-show-panel="login">Back to login</button>
+            </section>
 
             <div class="welcome-footer">
                 <span>Guidance and support, made accessible</span>
@@ -895,9 +1048,15 @@
     <script>
         const authPage = document.querySelector('[data-auth-page]');
         const authViews = authPage.querySelectorAll('[data-auth-view]');
+        const welcomeContent = authPage.querySelector('[data-welcome-content]');
+        const contactContent = authPage.querySelector('[data-contact-content]');
 
         function showAuthView(viewName, moveFocus = true) {
             authPage.dataset.mode = viewName;
+            welcomeContent.inert = false;
+            welcomeContent.setAttribute('aria-hidden', 'false');
+            contactContent.inert = true;
+            contactContent.setAttribute('aria-hidden', 'true');
 
             authViews.forEach((view) => {
                 const isActive = view.dataset.authView === viewName;
@@ -910,8 +1069,31 @@
             }
         }
 
-        authPage.querySelectorAll('[data-show-panel]').forEach((button) => {
-            button.addEventListener('click', () => showAuthView(button.dataset.showPanel));
+        function showContactPanel() {
+            authPage.dataset.mode = 'contact';
+            contactContent.inert = false;
+            contactContent.setAttribute('aria-hidden', 'false');
+            welcomeContent.inert = true;
+            welcomeContent.setAttribute('aria-hidden', 'true');
+
+            authViews.forEach((view) => {
+                const isActive = view.dataset.authView === 'login';
+                view.hidden = !isActive;
+                view.inert = !isActive;
+            });
+
+            requestAnimationFrame(() => contactContent.querySelector('h2').focus({ preventScroll: true }));
+        }
+
+        document.querySelectorAll('[data-show-panel]').forEach((button) => {
+            button.addEventListener('click', (event) => {
+                event.preventDefault();
+                if (button.dataset.showPanel === 'contact') {
+                    showContactPanel();
+                } else {
+                    showAuthView(button.dataset.showPanel);
+                }
+            });
         });
 
         authPage.querySelectorAll('[data-password-toggle]').forEach((button) => {

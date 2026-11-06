@@ -94,6 +94,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('guidance/record-history/{type}', [StudentRecordController::class, 'index'])
         ->whereIn('type', ['all', 'slips', 'appointments'])
         ->name('guidance.records.index');
+    Route::get('guidance/students-records', [StudentRecordController::class, 'dashboard'])
+        ->name('guidance.students-records');
     Route::get('guidance/archived-files', [StudentRecordController::class, 'archived'])
         ->name('guidance.records.archived');
     Route::get('guidance/student-records/{student}', [StudentRecordController::class, 'show'])
@@ -152,6 +154,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('assigned-slips', [SlipSubmissionController::class, 'assignedIndex'])->name('assigned-slips.index');
     Route::get('assigned-slips/{slipAssignment}/fill-up', [SlipSubmissionController::class, 'assignedCreate'])
         ->name('assigned-slips.fillup');
+    Route::post('assigned-slips/{slipAssignment}/cancel-request', [SlipSubmissionController::class, 'cancelStudentSlipRequest'])
+        ->name('assigned-slips.cancel-request');
     Route::post('assigned-slips/{slipAssignment}/submit', [SlipSubmissionController::class, 'assignedStore'])
         ->name('assigned-slips.submit');
     Route::post('assigned-slips/{slipAssignment}/send-result-to-teacher', [SlipSubmissionController::class, 'sendClassAdmissionResultToTeacher'])

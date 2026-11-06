@@ -80,6 +80,11 @@
             <flux:link :href="route('register')" wire:navigate>{{ __('Sign up') }}</flux:link>
         </div>
         {{-- @end-chisel-registration --}}
+        <section aria-labelledby="login-contact-heading" class="rounded-xl border border-zinc-200 bg-zinc-50 p-4 text-sm text-zinc-600 dark:border-zinc-700 dark:bg-zinc-900/50 dark:text-zinc-300">
+            <h2 id="login-contact-heading" class="font-semibold text-zinc-900 dark:text-zinc-100">Contact Us</h2>
+            <p class="mt-1">We are the researchers behind KajoRec. For account or login assistance, email us at <a class="font-medium text-emerald-700 underline hover:text-emerald-800 dark:text-emerald-300 dark:hover:text-emerald-200" href="mailto:kajorec@gmail.com">kajorec@gmail.com</a>.</p>
+            <p class="mt-1">Support hours: 8:00 AM–3:00 PM.</p>
+        </section>
     </div>
 
     <script>

@@ -29,4 +29,21 @@ class DashboardTest extends TestCase
             ->assertSee('bg-[#09ba44]', false)
             ->assertSee('dark:bg-[#20783e]', false);
     }
+
+    public function test_guidance_dashboard_monthly_report_uses_same_origin_and_loads(): void
+    {
+        $counselor = User::factory()->create(['role' => 'guidance_counselor']);
+
+        $this->actingAs($counselor)
+            ->get(route('guidance.dashboard'))
+            ->assertOk()
+            ->assertSee('src="/guidance/monthly-report?embedded=1"', false);
+
+        $this->get(route('guidance.reports.monthly'))
+            ->assertOk()
+            ->assertSee('Monthly Student Report')
+            ->assertSee('name="month"', false)
+            ->assertDontSee('Workspace')
+            ->assertDontSee('Guidance Dashboard');
+    }
 }

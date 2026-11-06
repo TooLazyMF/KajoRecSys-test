@@ -209,9 +209,11 @@ class SlipSubmissionController extends Controller
 
                 return [
                     'assignment' => $referral,
+                    'appointment' => $referral->appointments->first(),
                     'can_issue_client_information' => false,
                     'can_issue_class_admission' => ! $hasClassAdmission,
                     'referral_pdf_ready' => $this->hasReferralDocumentControlData($referralData),
+                    'missing_document_control_identifiers' => ! $this->hasReferralDocumentControlIdentifiers($referralData),
                     'document_control_data' => $referralData,
                 ];
             })
@@ -221,7 +223,9 @@ class SlipSubmissionController extends Controller
                 || $referral['appointment'] !== null
             )
             ->values();
-
+        $referralsMissingDocumentControlCount = $referrals
+            ->where('missing_document_control_identifiers', true)
+            ->count();
         return view('admin.admin_dashboard', [
             'referrals' => $referrals,
             'totalStudentsCount' => User::query()->where('role', 'student')->where('is_active', true)->count(),
@@ -252,10 +256,7 @@ class SlipSubmissionController extends Controller
                 ->whereIn('status', ['accepted', 'done', 'missed'])
                 ->orderBy('scheduled_at')
                 ->get(),
-            'activeReferralsCount' => SlipAssignment::query()
-                ->where('slip', 'student-referral-slip')
-                ->where('status', 'pending')
-                ->count(),
+            'activeReferralsCount' => $referralsMissingDocumentControlCount,
             'activeReferrals' => SlipAssignment::query()
                 ->with('student')
                 ->where('slip', 'student-referral-slip')
@@ -268,12 +269,6 @@ class SlipSubmissionController extends Controller
                 ->whereIn('status', ['pending', 'accepted'])
                 ->orderBy('scheduled_at')
                 ->limit(6)
-                ->get(),
-            'completedAppointments' => Appointment::query()
-                ->with('requester')
-                ->where('status', 'done')
-                ->latest('completed_at')
-                ->limit(10)
                 ->get(),
             'missedDoneAppointments' => Appointment::query()
                 ->with('requester')
@@ -652,7 +647,6 @@ class SlipSubmissionController extends Controller
 
         $slips = SlipCatalog::all();
         $referralAssignments = SlipAssignment::query()
-            ->with(['relatedAssignment', 'slipSubmission'])
             ->where('student_id', $request->user()->id)
             ->where(function ($query) {
                 $query->where('slip', 'student-referral-slip')
@@ -660,21 +654,17 @@ class SlipSubmissionController extends Controller
             })
             ->latest()
             ->get();
-        $referralTracking = $this->referralTracking($request->user()->id);
         $history = SlipSubmission::query()
             ->where('user_id', $request->user()->id)
             ->latest()
             ->get()
-            ->map(function (SlipSubmission $submission) use ($slips, $referralAssignments) {
-                $assignment = $referralAssignments->firstWhere('slip_submission_id', $submission->id);
-
+            ->map(function (SlipSubmission $submission) use ($slips) {
                 return [
-                'title' => $slips[$submission->slip]['title'] ?? 'Assigned Slip',
-                'submitted_at' => $submission->created_at,
-                'status' => $submission->review_status,
-                'show_url' => route('slips.submissions.show', $submission),
-                'pdf_url' => route('slips.submissions.pdf', $submission),
-                'referral' => $assignment ? $this->referralLabel($assignment) : null,
+                    'title' => $slips[$submission->slip]['title'] ?? 'Assigned Slip',
+                    'submitted_at' => $submission->created_at,
+                    'status' => $submission->review_status,
+                    'show_url' => route('slips.submissions.show', $submission),
+                    'pdf_url' => route('slips.submissions.pdf', $submission),
                 ];
             })
             ->concat(
@@ -686,7 +676,6 @@ class SlipSubmissionController extends Controller
                         'status' => $assignment->status,
                         'show_url' => null,
                         'pdf_url' => null,
-                        'referral' => $this->referralLabel($assignment),
                     ])
             )
             ->concat(
@@ -700,48 +689,12 @@ class SlipSubmissionController extends Controller
                         'status' => $cnsRequest->review_status,
                         'show_url' => route('cns.requests.show', $cnsRequest),
                         'pdf_url' => route('cns.requests.pdf', $cnsRequest),
-                        'referral' => null,
                     ])
             )
             ->sortByDesc('submitted_at')
             ->values();
 
-        return view('slips.history', compact('history', 'referralTracking'));
-    }
-
-    /** @return \Illuminate\Support\Collection<int, array<string, mixed>> */
-    private function referralTracking(int $studentId)
-    {
-        return SlipAssignment::query()
-            ->with(['student', 'slipSubmission', 'followups.slipSubmission'])
-            ->where('student_id', $studentId)
-            ->where('slip', 'student-referral-slip')
-            ->latest('completed_at')
-            ->get()
-            ->map(function (SlipAssignment $referral): array {
-                $steps = collect([$referral])->merge($referral->followups->sortBy('created_at'));
-
-                return [
-                    'referral' => $referral,
-                    'steps' => $steps,
-                    'status' => $referral->followups->contains(fn (SlipAssignment $step) => $step->status === 'approved')
-                        ? 'Follow-up approved'
-                        : ($referral->followups->contains(fn (SlipAssignment $step) => $step->status === 'submitted')
-                            ? 'Follow-up submitted'
-                            : str_replace('_', ' ', $referral->status)),
-                ];
-            })->values();
-    }
-
-    private function referralLabel(SlipAssignment $assignment): ?string
-    {
-        $referral = $assignment->slip === 'student-referral-slip'
-            ? $assignment
-            : $assignment->relatedAssignment;
-
-        return $referral?->slip === 'student-referral-slip'
-            ? 'Referral · '.str_replace('_', ' ', $referral->status)
-            : null;
+        return view('slips.history', compact('history'));
     }
 
     public function assign(
@@ -761,15 +714,19 @@ class SlipSubmissionController extends Controller
                 ],
                 'information_verified' => ['accepted'],
             ]);
+            $request->validate([
+                'details.days_absent' => ['required', 'integer', 'min:1', 'max:365'],
+            ]);
             $daysAbsent = (int) $request->input('details.days_absent');
             $request->validate([
                 'details.absence_dates' => ['required', 'array', 'size:'.$daysAbsent],
                 'details.absence_dates.*' => ['required', 'date', 'distinct', 'before_or_equal:today'],
             ]);
+            $absenceDates = $request->input('details.absence_dates');
             $request->merge([
                 'details' => [
                     ...$request->input('details', []),
-                    'date_absent' => implode(', ', $request->input('details.absence_dates', [])),
+                    'date_absent' => $absenceDates[0],
                 ],
             ]);
             $student = User::query()->findOrFail($validated['student_id']);
@@ -794,34 +751,43 @@ class SlipSubmissionController extends Controller
             $data['referred_student_name'] = $student->name;
             $data['assigned_by'] = $request->user()->id;
 
-            return DB::transaction(function () use ($request, $student, $slip, $data, $definition, $pdfGenerator) {
-                $assignment = SlipAssignment::create([
-                    'assigned_by' => $request->user()->id,
-                    'student_id' => $student->id,
-                    'bundle_id' => (string) Str::uuid(),
-                    'slip' => $slip,
-                ]);
+            return DB::transaction(function () use ($request, $student, $slip, $data, $definition, $pdfGenerator, $absenceDates) {
+                foreach ($absenceDates as $absenceDate) {
+                    $referralData = [
+                        ...$data,
+                        'date_absent' => $absenceDate,
+                        'days_absent' => 1,
+                    ];
+                    $assignment = SlipAssignment::create([
+                        'assigned_by' => $request->user()->id,
+                        'student_id' => $student->id,
+                        'bundle_id' => (string) Str::uuid(),
+                        'slip' => $slip,
+                    ]);
 
-                $pdfPath = 'slip-submissions/'.Str::uuid().'.pdf';
-                $submission = SlipSubmission::create([
-                    'user_id' => $student->id,
-                    'slip' => $slip,
-                    'data' => $data,
-                    'pdf_path' => $pdfPath,
-                    'review_status' => 'draft',
-                ]);
+                    $pdfPath = 'slip-submissions/'.Str::uuid().'.pdf';
+                    $submission = SlipSubmission::create([
+                        'user_id' => $student->id,
+                        'slip' => $slip,
+                        'data' => $referralData,
+                        'pdf_path' => $pdfPath,
+                        'review_status' => 'draft',
+                    ]);
 
-                if (! Storage::disk('local')->put($pdfPath, $pdfGenerator->generate($submission, $definition))) {
-                    throw new \RuntimeException('The referral draft PDF could not be stored.');
+                    if (! Storage::disk('local')->put($pdfPath, $pdfGenerator->generate($submission, $definition))) {
+                        throw new \RuntimeException('The referral draft PDF could not be stored.');
+                    }
+
+                    $assignment->update([
+                        'slip_submission_id' => $submission->id,
+                    ]);
                 }
-
-                $assignment->update([
-                    'slip_submission_id' => $submission->id,
-                ]);
 
                 return redirect()
                     ->route('teacher.dashboard')
-                    ->with('status', 'The referral was sent to the student for review and submission to Guidance.');
+                    ->with('status', count($absenceDates) === 1
+                        ? 'The referral was sent to the student for review and submission to Guidance.'
+                        : count($absenceDates).' referrals were sent to the student for review and submission to Guidance.');
             });
         }
 
@@ -944,9 +910,8 @@ class SlipSubmissionController extends Controller
             ->get(['id', 'name', 'id_number', 'email', 'gender']);
 
         $studentReferences = StudentReference::query()
-            ->whereIn('id_number', $students->pluck('id_number')->filter())
             ->get(['id_number', 'year', 'course'])
-            ->keyBy('id_number');
+            ->keyBy(fn (StudentReference $reference) => StudentReference::normalizeIdNumber($reference->id_number));
 
         if ($slip === 'student-referral-slip') {
             return view('slips.create-referral', [
@@ -996,6 +961,36 @@ class SlipSubmissionController extends Controller
         return redirect()->route('assigned-slips.fillup', $assignment);
     }
 
+    public function cancelStudentSlipRequest(Request $request, SlipAssignment $slipAssignment): RedirectResponse
+    {
+        DB::transaction(function () use ($request, $slipAssignment): void {
+            $assignment = SlipAssignment::query()
+                ->whereKey($slipAssignment->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            abort_unless(
+                $request->user()->role === 'student'
+                    && $assignment->student_id === $request->user()->id
+                    && $assignment->assigned_by === $request->user()->id,
+                403
+            );
+            abort_unless(isset(SlipCatalog::studentRequestForms()[$assignment->slip]), 404);
+            abort_unless(
+                $assignment->status === 'pending'
+                    && $assignment->slip_submission_id === null,
+                409,
+                'Only unsubmitted requests can be canceled.'
+            );
+
+            $assignment->delete();
+        });
+
+        return redirect()
+            ->route('student.dashboard')
+            ->with('status', 'Your form request was canceled.');
+    }
+
     public function issueFollowup(
         Request $request,
         SlipAssignment $referral,
@@ -1028,6 +1023,7 @@ class SlipSubmissionController extends Controller
                     ...$referralSubmission->data->getArrayCopy(),
                     'received_by_name' => $request->user()->name,
                     'received_date' => $receivedAt,
+                    'effectivity_date' => $receivedAt,
                 ],
             ]);
 
@@ -1101,14 +1097,13 @@ class SlipSubmissionController extends Controller
     }
 
     /**
-     * @return array{document_code: string, revision_number: string, effectivity_date: string, control_number: string}
+     * @return array{document_code: string, revision_number: string, control_number: string}
      */
     private function validatedReferralDocumentControlData(Request $request): array
     {
         $validated = $request->validate([
             'details.document_code' => ['required', 'string', 'max:30'],
             'details.revision_number' => ['required', 'string', 'max:20'],
-            'details.effectivity_date' => ['required', 'date'],
             'details.control_number' => ['required', 'string', 'max:30'],
         ]);
 
@@ -1118,6 +1113,17 @@ class SlipSubmissionController extends Controller
     private function hasReferralDocumentControlData(array $data): bool
     {
         foreach (['document_code', 'revision_number', 'effectivity_date', 'control_number'] as $key) {
+            if (! filled($data[$key] ?? null)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private function hasReferralDocumentControlIdentifiers(array $data): bool
+    {
+        foreach (['document_code', 'revision_number', 'control_number'] as $key) {
             if (! filled($data[$key] ?? null)) {
                 return false;
             }
@@ -1183,6 +1189,7 @@ class SlipSubmissionController extends Controller
             'selectedStudent' => $student,
             'defaults' => $defaults,
             'existingSubmission' => $slipAssignment->slipSubmission,
+            'isStudentRequest' => isset(SlipCatalog::studentRequestForms()[$slipAssignment->slip]),
             'isTeacherSubmittedReferral' => $isTeacherSubmittedReferral,
             'referralPdfReady' => $isTeacherSubmittedReferral
                 ? $this->hasReferralDocumentControlData($slipAssignment->slipSubmission?->data?->getArrayCopy() ?? [])
@@ -1419,14 +1426,20 @@ class SlipSubmissionController extends Controller
 
         $referralData = $referral->slipSubmission->data->getArrayCopy();
         $student = User::query()->find($assignment->student_id);
+        $reference = StudentReference::query()
+            ->whereIn('id_number', StudentReference::matchingIdNumbers($student?->id_number))
+            ->first();
         $absenceDates = $referralData['absence_dates'] ?? [];
         $dateAbsent = $referralData['date_absent'] ?? (is_array($absenceDates) ? implode(', ', $absenceDates) : $absenceDates);
         $daysAbsent = $referralData['days_absent'] ?? (is_array($absenceDates) ? count($absenceDates) : null);
 
         return [
             'student_name' => $referralData['student_name'] ?? $student?->name,
-            'sex' => $referralData['sex'] ?? ($student?->gender ? ucfirst($student->gender) : null),
-            'program_year' => $referralData['program_year'] ?? $referralData['course_year'] ?? null,
+            'sex' => $reference?->gender
+                ? ucfirst($reference->gender)
+                : ($referralData['sex'] ?? ($student?->gender ? ucfirst($student->gender) : null)),
+            'program_year' => trim(implode(' ', array_filter([$reference?->course, $reference?->year])))
+                ?: ($referralData['program_year'] ?? $referralData['course_year'] ?? null),
             'date_absent' => $dateAbsent,
             'days_absent' => $daysAbsent,
         ];
@@ -1691,7 +1704,9 @@ class SlipSubmissionController extends Controller
     /** @return array<string, mixed> */
     private function clientInformationDefaults(User $student): array
     {
-        $reference = StudentReference::query()->where('id_number', trim($student->id_number))->first();
+        $reference = StudentReference::query()
+            ->whereIn('id_number', StudentReference::matchingIdNumbers($student->id_number))
+            ->first();
         if (! $reference) {
             return [];
         }

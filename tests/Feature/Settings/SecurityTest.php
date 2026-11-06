@@ -64,6 +64,33 @@ class SecurityTest extends TestCase
 
         $response->assertRedirect(route('password.confirm'));
     }
+
+    public function test_security_confirmation_prepares_security_settings_as_the_return_destination(): void
+    {
+        $user = User::factory()->create();
+
+        $response = $this->actingAs($user)
+            ->post(route('security.confirmation.prepare'));
+
+        $response->assertNoContent();
+        $response->assertSessionHas('url.intended', route('security.edit'));
+    }
+
+    public function test_password_confirmation_returns_to_security_settings(): void
+    {
+        $user = User::factory()->create();
+
+        $response = $this->actingAs($user)
+            ->post(route('security.confirmation.prepare'));
+
+        $response->assertNoContent();
+
+        $this->post(route('password.confirm.store'), [
+            'password' => 'password',
+        ])->assertRedirect(route('security.edit'));
+
+        $this->assertNotEmpty(session('auth.password_confirmed_at'));
+    }
     /* @end-chisel-password-confirmation */
 
     public function test_security_settings_page_renders_without_two_factor_when_feature_is_disabled(): void
